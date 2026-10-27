@@ -37,9 +37,7 @@ const courseSchema = new mongoose.Schema(
   }
 );
 
-// Index for normalized unique course code lookup
-courseSchema.index({ courseCode: 1 }, { unique: true });
-
+// Unique courseCode is indexed via field definition
 const Course = mongoose.models.Course || mongoose.model('Course', courseSchema);
 
 module.exports = Course;
