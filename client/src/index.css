@@ -50,6 +50,18 @@ body {
   min-height: 100vh;
 }
 
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
 /* App Shell Layout */
 .app-shell {
   display: flex;

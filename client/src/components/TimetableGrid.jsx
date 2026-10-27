@@ -39,13 +39,19 @@ function timeToMinutes(timeStr) {
  */
 function TimetableGrid({
   timetable,
+  selectedTimetable,
   sessions = [],
   conflicts = [],
+  courses = [],
   isLoading = false,
+  loading = false,
   onEditSession,
   onDeleteSession
 }) {
-  if (isLoading) {
+  const activeTimetable = timetable || selectedTimetable;
+  const isGridLoading = isLoading || loading;
+
+  if (isGridLoading) {
     return (
       <div className="grid-loading-state" role="status" aria-live="polite">
         <div className="spinner" aria-hidden="true"></div>
@@ -54,7 +60,7 @@ function TimetableGrid({
     );
   }
 
-  if (!timetable) {
+  if (!activeTimetable) {
     return (
       <div className="grid-empty-state">
         <div className="empty-icon" aria-hidden="true">📋</div>
@@ -68,12 +74,21 @@ function TimetableGrid({
   const conflictingSessionIds = new Set();
   const conflictTypeMap = new Map();
 
-  conflicts.forEach((c) => {
+  const conflictList = Array.isArray(conflicts) ? conflicts : [];
+  conflictList.forEach((c) => {
     if (c.conflictingSessionId) {
       conflictingSessionIds.add(String(c.conflictingSessionId));
       conflictTypeMap.set(String(c.conflictingSessionId), c.type);
     }
   });
+
+  // Course lookup map for fast resolution if courses prop passed
+  const courseMap = new Map();
+  if (Array.isArray(courses)) {
+    courses.forEach((c) => {
+      if (c && c._id) courseMap.set(String(c._id), c);
+    });
+  }
 
   // Group sessions by day of week
   const sessionsByDay = {};
@@ -100,15 +115,15 @@ function TimetableGrid({
       <div className="grid-toolbar">
         <div className="grid-toolbar-info">
           <span className="info-label">Week View:</span>
-          <strong>{timetable.name}</strong>
+          <strong>{activeTimetable.name}</strong>
           <span className="session-count-badge">
             {totalSessionsCount} {totalSessionsCount === 1 ? 'class session' : 'class sessions'}
           </span>
         </div>
-        {conflicts.length > 0 && (
+        {conflictList.length > 0 && (
           <div className="grid-conflict-alert" role="alert">
             <span className="alert-icon" aria-hidden="true">⚠️</span>
-            <span>{conflicts.length} schedule conflict{conflicts.length === 1 ? '' : 's'} detected</span>
+            <span>{conflictList.length} schedule conflict{conflictList.length === 1 ? '' : 's'} detected</span>
           </div>
         )}
       </div>
@@ -122,7 +137,7 @@ function TimetableGrid({
         </div>
       ) : (
         <div className="table-responsive-container">
-          <table className="timetable-table" aria-label={`Weekly Schedule for ${timetable.name}`}>
+          <table className="timetable-table" aria-label={`Weekly Schedule for ${activeTimetable.name}`}>
             <thead>
               <tr>
                 <th scope="col" className="time-col-header">Time</th>
@@ -160,10 +175,16 @@ function TimetableGrid({
                             const isConflicting = conflictingSessionIds.has(String(sessionId));
                             const conflictType = conflictTypeMap.get(String(sessionId));
 
-                            const course = session.course || session.courseId || {};
-                            const courseCode = course.courseCode || session.courseCode || 'N/A';
-                            const courseTitle = course.title || session.courseTitle || 'Untitled Course';
-                            const facultyName = course.facultyName || session.facultyName || '';
+                            const courseObj =
+                              session.course ||
+                              (typeof session.courseId === 'object' && session.courseId !== null
+                                ? session.courseId
+                                : courseMap.get(String(session.courseId))) ||
+                              {};
+
+                            const courseCode = courseObj.courseCode || session.courseCode || 'N/A';
+                            const courseTitle = courseObj.title || session.courseTitle || 'Untitled Course';
+                            const facultyName = courseObj.facultyName || session.facultyName || '';
                             const roomName = session.room || '';
 
                             return (
@@ -216,7 +237,7 @@ function TimetableGrid({
                                       className="btn-card-action btn-delete"
                                       onClick={() => {
                                         if (window.confirm(`Delete ${courseCode} (${session.startTime} - ${session.endTime})?`)) {
-                                          onDeleteSession(sessionId);
+                                          onDeleteSession(session);
                                         }
                                       }}
                                       aria-label={`Delete ${courseCode} session`}

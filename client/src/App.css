@@ -1,0 +1,92 @@
+.app-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  background: #ffffff;
+  padding: 1.25rem 1.75rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.app-brand h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #2b6cb0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-brand p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
+  color: #718096;
+}
+
+.app-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  background: #f7fafc;
+  border: 1px solid #edf2f7;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #38a169;
+}
+
+.status-dot.error {
+  background-color: #e53e3e;
+}
+
+.app-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.tab-btn {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab-btn:hover {
+  background: #f8fafc;
+  color: #2b6cb0;
+}
+
+.tab-btn.active {
+  background: #3182ce;
+  color: #ffffff;
+  border-color: #3182ce;
+}
+
+.app-footer {
+  text-align: center;
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  color: #718096;
+  font-size: 0.8rem;
+}
