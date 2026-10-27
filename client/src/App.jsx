@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getTimetableSessions,
   deleteSession,
-  checkHealth,
-  ApiError
+  getCourses,
+  checkHealth
 } from './services/api';
 import CourseManager from './components/CourseManager';
 import TimetableManager from './components/TimetableManager';
@@ -17,7 +17,7 @@ export default function App() {
   const [courses, setCourses] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [editingSession, setEditingSession] = useState(null);
-  const [conflicts, setConflicts] = useState(null);
+  const [conflicts, setConflicts] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionError, setSessionError] = useState(null);
   const [backendOnline, setBackendOnline] = useState(null);
@@ -30,6 +30,11 @@ export default function App() {
     checkHealth()
       .then(() => setBackendOnline(true))
       .catch(() => setBackendOnline(false));
+
+    // Also pre-fetch courses
+    getCourses()
+      .then((data) => setCourses(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, []);
 
   // Fetch sessions whenever selectedTimetable changes
@@ -54,13 +59,13 @@ export default function App() {
   useEffect(() => {
     fetchSessions();
     setEditingSession(null);
-    setConflicts(null);
+    setConflicts([]);
   }, [fetchSessions]);
 
   const handleSelectTimetable = (timetable) => {
     setSelectedTimetable(timetable);
     setEditingSession(null);
-    setConflicts(null);
+    setConflicts([]);
   };
 
   const handleCoursesChange = (newCourses) => {
@@ -69,14 +74,13 @@ export default function App() {
 
   const handleSessionSaved = () => {
     setEditingSession(null);
-    setConflicts(null);
+    setConflicts([]);
     fetchSessions();
   };
 
   const handleStartEditSession = (session) => {
     setEditingSession(session);
-    setConflicts(null);
-    // Switch to schedule tab if on another tab and scroll to form
+    setConflicts([]);
     setActiveTab('schedule');
     if (sessionFormRef.current) {
       sessionFormRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -85,25 +89,16 @@ export default function App() {
 
   const handleCancelEditSession = () => {
     setEditingSession(null);
-    setConflicts(null);
+    setConflicts([]);
   };
 
-  const handleDeleteSession = async (session) => {
-    const courseObj =
-      session.course ||
-      (typeof session.courseId === 'object' && session.courseId !== null
-        ? session.courseId
-        : courses.find((c) => c._id === session.courseId)) ||
-      {};
-
-    const title = courseObj.courseCode ? `${courseObj.courseCode} (${session.dayOfWeek} ${session.startTime})` : 'this session';
-    if (!window.confirm(`Are you sure you want to delete ${title}?`)) {
-      return;
-    }
+  const handleDeleteSession = async (sessionOrId) => {
+    const sessionId = typeof sessionOrId === 'string' ? sessionOrId : (sessionOrId?._id || sessionOrId?.id);
+    if (!sessionId) return;
 
     try {
-      await deleteSession(session._id);
-      if (editingSession?._id === session._id) {
+      await deleteSession(sessionId);
+      if (editingSession && (editingSession._id === sessionId || editingSession.id === sessionId)) {
         setEditingSession(null);
       }
       await fetchSessions();
@@ -113,52 +108,61 @@ export default function App() {
   };
 
   return (
-    <div className="app-container">
-      {/* App Header */}
+    <div className="app-shell">
+      {/* Top Application Header */}
       <header className="app-header">
-        <div className="app-brand">
-          <h1>📅 Timetable Builder</h1>
-          <p>Schedule manager with automated clash detection</p>
-        </div>
-        <div className="app-status">
-          <span className={`status-dot ${backendOnline === false ? 'error' : ''}`} />
-          <span>
-            {backendOnline === null
-              ? 'Checking API...'
-              : backendOnline
-              ? 'API Connected (Port 5000)'
-              : 'API Offline'}
-          </span>
+        <div className="header-container">
+          <div className="brand-wrapper">
+            <div className="brand-icon" aria-hidden="true">📅</div>
+            <div>
+              <h1 className="brand-title">Timetable Builder</h1>
+              <p className="brand-subtitle">Smart Scheduling with Conflict Detection</p>
+            </div>
+          </div>
+          <div className="header-actions">
+            <span className="meta-pill" title="API Connectivity Status">
+              {backendOnline === null
+                ? 'Connecting API...'
+                : backendOnline
+                ? '● API Online'
+                : '○ API Offline'}
+            </span>
+            {selectedTimetable && (
+              <span className="meta-pill" title="Academic Year">
+                Academic Year: {selectedTimetable.academicYear}
+              </span>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* Navigation Tabs */}
-      <nav className="app-tabs" aria-label="Main Sections">
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'schedule' ? 'active' : ''}`}
-          onClick={() => setActiveTab('schedule')}
-        >
-          Timetable & Schedule
-        </button>
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'courses' ? 'active' : ''}`}
-          onClick={() => setActiveTab('courses')}
-        >
-          Course Catalogue ({courses.length})
-        </button>
-        <button
-          type="button"
-          className={`tab-btn ${activeTab === 'timetables' ? 'active' : ''}`}
-          onClick={() => setActiveTab('timetables')}
-        >
-          Timetables
-        </button>
-      </nav>
+      {/* Main Workspace */}
+      <main className="app-main">
+        {/* Navigation Tabs */}
+        <nav className="app-tabs" aria-label="Main Sections" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+          <button
+            type="button"
+            className={`btn ${activeTab === 'schedule' ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setActiveTab('schedule')}
+          >
+            Weekly Schedule
+          </button>
+          <button
+            type="button"
+            className={`btn ${activeTab === 'courses' ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setActiveTab('courses')}
+          >
+            Course Catalogue ({courses.length})
+          </button>
+          <button
+            type="button"
+            className={`btn ${activeTab === 'timetables' ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setActiveTab('timetables')}
+          >
+            Timetables
+          </button>
+        </nav>
 
-      {/* Main Content Area */}
-      <main>
         {/* Timetables Tab */}
         {activeTab === 'timetables' && (
           <TimetableManager
@@ -174,19 +178,33 @@ export default function App() {
           />
         )}
 
-        {/* Schedule Tab (Default & Primary View) */}
+        {/* Schedule Tab */}
         {activeTab === 'schedule' && (
           <>
-            {/* Always provide timetable selector on top */}
+            {/* Timetable Overview Banner & Selector */}
             <TimetableManager
               selectedTimetableId={selectedTimetable?._id}
               onSelectTimetable={handleSelectTimetable}
             />
 
+            {/* Timetable Overview Banner */}
+            <div className="timetable-banner">
+              <div className="timetable-title-group">
+                <h2>{selectedTimetable ? selectedTimetable.name : 'No Timetable Selected'}</h2>
+                {selectedTimetable && (
+                  <div className="timetable-meta-tags">
+                    <span className="meta-pill">Semester {selectedTimetable.semester}</span>
+                    <span className="meta-pill">Section {selectedTimetable.section}</span>
+                    <span className="meta-pill">{sessions.length} Session{sessions.length === 1 ? '' : 's'}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Conflict Notification Panel */}
             <ConflictPanel
               conflicts={conflicts}
-              onDismiss={() => setConflicts(null)}
+              onDismiss={() => setConflicts([])}
             />
 
             {/* Session Add / Edit Form */}
@@ -197,12 +215,12 @@ export default function App() {
                 editingSession={editingSession}
                 onSessionSaved={handleSessionSaved}
                 onCancelEdit={handleCancelEditSession}
-                onConflict={(c) => setConflicts(c)}
+                onConflict={(c) => setConflicts(c || [])}
               />
             </div>
 
             {sessionError && (
-              <div className="feedback-banner error" role="alert">
+              <div className="feedback-banner error" role="alert" style={{ marginBottom: '1rem' }}>
                 <span>{sessionError}</span>
                 <button
                   type="button"
@@ -214,22 +232,23 @@ export default function App() {
               </div>
             )}
 
-            {/* Timetable Grid View (Integrated with Teammate 1) */}
-            <TimetableGrid
-              sessions={sessions}
-              courses={courses}
-              selectedTimetable={selectedTimetable}
-              onEditSession={handleStartEditSession}
-              onDeleteSession={handleDeleteSession}
-              loading={sessionsLoading}
-            />
+            {/* Weekly Timetable Grid Visualization */}
+            <section aria-label="Weekly Schedule Visualization">
+              <TimetableGrid
+                timetable={selectedTimetable}
+                selectedTimetable={selectedTimetable}
+                sessions={sessions}
+                conflicts={conflicts}
+                courses={courses}
+                isLoading={sessionsLoading}
+                loading={sessionsLoading}
+                onEditSession={handleStartEditSession}
+                onDeleteSession={handleDeleteSession}
+              />
+            </section>
           </>
         )}
       </main>
-
-      <footer className="app-footer">
-        <p>Timetable Builder with Clash Detection &bull; Full-stack REST API &amp; React Architecture</p>
-      </footer>
     </div>
   );
 }
