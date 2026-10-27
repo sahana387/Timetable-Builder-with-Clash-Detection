@@ -1,9 +1,11 @@
 {
   "name": "timetable-builder-server",
   "version": "1.0.0",
-  "description": "Backend API for Timetable Builder with Clash Detection",
-  "main": "src/app.js",
+  "description": "Node.js & Express REST API with MongoDB for Timetable Builder with Clash Detection",
+  "main": "src/server.js",
   "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
     "test": "node --test test/**/*.test.js"
   },
   "dependencies": {

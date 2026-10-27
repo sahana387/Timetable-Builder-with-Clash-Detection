@@ -458,10 +458,6 @@ router.get('/sessions/:id', getSessionById);
 router.patch('/sessions/:id', updateSession);
 router.delete('/sessions/:id', deleteSession);
 
-// Also support mounting directly at /api/sessions
-router.get('/:id', getSessionById);
-router.patch('/:id', updateSession);
-router.delete('/:id', deleteSession);
 
 module.exports = router;
 module.exports.listSessionsByTimetable = listSessionsByTimetable;
